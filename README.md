@@ -27,7 +27,8 @@ Set `CORS_ORIGIN` to your frontend URL with **no trailing slash**, e.g. `https:/
 
 - `GET /api/config`
 - `GET /api/users/:externalId`
-- `POST /api/check-in` — one record per user per calendar day (timezone via `ATTENDANCE_TIMEZONE`)
+- `POST /api/check-in` — one record per user per calendar day; requires `deviceToken` (bound on first check-in per user)
+- `DELETE /api/admin/users/:userId/device` — admin unbind so the user can register a new phone
 
 ## Admin API
 

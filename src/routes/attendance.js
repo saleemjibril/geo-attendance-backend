@@ -6,6 +6,10 @@ import {
   readVenueFromEnv,
 } from '../lib/geo.js'
 import {
+  assertDeviceForCheckIn,
+  userDeviceSummary,
+} from '../services/deviceBinding.js'
+import {
   createUser,
   getAttendanceForDate,
   getUserByExternalId,
@@ -113,10 +117,13 @@ router.get('/users/:externalId', async (req, res, next) => {
       return res.json({ exists: false })
     }
 
-    res.json({
-      exists: true,
-      user: formatUser(user),
-    })
+  res.json({
+    exists: true,
+    user: {
+      ...formatUser(user),
+      ...userDeviceSummary(user),
+    },
+  })
   } catch (err) {
     next(err)
   }
@@ -169,6 +176,7 @@ router.post('/check-in', async (req, res, next) => {
     const externalId = String(req.body.externalId ?? '').trim()
     const name = String(req.body.name ?? '').trim()
     const phone = String(req.body.phone ?? '').trim()
+    const deviceToken = String(req.body.deviceToken ?? '').trim()
 
     if (!externalId) {
       return res.status(400).json({ error: 'externalId is required' })
@@ -192,6 +200,14 @@ router.post('/check-in', async (req, res, next) => {
           throw err
         }
       }
+    }
+
+    const deviceCheck = await assertDeviceForCheckIn(user, deviceToken)
+    if (deviceCheck.error) {
+      return res.status(deviceCheck.status).json({
+        error: deviceCheck.error,
+        code: deviceCheck.code,
+      })
     }
 
     const attendanceDate = todayDateString()

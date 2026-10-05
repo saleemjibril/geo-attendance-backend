@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { parseOptionalDateRange } from '../lib/dates.js'
 import { requireAdmin, signAdminToken } from '../middleware/adminAuth.js'
 import { findAdminByUsername, verifyAdminPassword } from '../services/admins.js'
+import { unbindUserDevice, userDeviceSummary } from '../services/deviceBinding.js'
 import {
   getUserById,
   listAttendanceForUser,
@@ -72,11 +73,32 @@ router.get('/users/:userId', async (req, res, next) => {
         name: user.name,
         phone: user.phone,
         registeredAt: user.createdAt,
+        ...userDeviceSummary(user),
       },
       from: range.from,
       to: range.to,
       attendanceCount: attendance.length,
       attendance,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.delete('/users/:userId/device', async (req, res, next) => {
+  try {
+    const user = await unbindUserDevice(req.params.userId)
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    res.json({
+      message: 'Device unbound',
+      user: {
+        id: user._id.toString(),
+        externalId: user.externalId,
+        ...userDeviceSummary(user),
+      },
     })
   } catch (err) {
     next(err)

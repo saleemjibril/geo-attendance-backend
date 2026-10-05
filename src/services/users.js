@@ -1,4 +1,5 @@
 import { Attendance } from '../models/Attendance.js'
+import { userDeviceSummary } from './deviceBinding.js'
 import { User } from '../models/User.js'
 
 const externalIdCollation = { locale: 'en', strength: 2 }
@@ -54,24 +55,41 @@ export async function listUsersWithAttendanceCounts({ from, to } = {}) {
 
   const pipeline = [
     ...(Object.keys(dateFilter).length ? [{ $match: dateFilter }] : []),
-    { $group: { _id: '$userId', attendanceCount: { $sum: 1 } } },
+    {
+      $group: {
+        _id: '$userId',
+        attendanceCount: { $sum: 1 },
+        lastMarkedAt: { $max: '$markedAt' },
+      },
+    },
   ]
 
-  const counts = await Attendance.aggregate(pipeline)
-  const countMap = new Map(
-    counts.map((row) => [row._id.toString(), row.attendanceCount])
+  const stats = await Attendance.aggregate(pipeline)
+  const statsMap = new Map(
+    stats.map((row) => [
+      row._id.toString(),
+      {
+        attendanceCount: row.attendanceCount,
+        lastMarkedAt: row.lastMarkedAt ?? null,
+      },
+    ])
   )
 
   const users = await User.find().sort({ name: 1 }).lean()
 
-  return users.map((user) => ({
-    id: user._id.toString(),
-    externalId: user.externalId,
-    name: user.name,
-    phone: user.phone,
-    registeredAt: user.createdAt,
-    attendanceCount: countMap.get(user._id.toString()) ?? 0,
-  }))
+  return users.map((user) => {
+    const userStats = statsMap.get(user._id.toString())
+    return {
+      id: user._id.toString(),
+      externalId: user.externalId,
+      name: user.name,
+      phone: user.phone,
+      registeredAt: user.createdAt,
+      attendanceCount: userStats?.attendanceCount ?? 0,
+      lastAttendanceAt: userStats?.lastMarkedAt ?? null,
+      ...userDeviceSummary(user),
+    }
+  })
 }
 
 export async function getUserById(userId) {
