@@ -13,11 +13,15 @@ Copy `.env.example` to `.env` and set at minimum:
 Admin passwords are stored hashed in MongoDB (`admins` collection). Login is validated against the database, not `.env`.
 - `ATTENDANCE_LAT` / `ATTENDANCE_LNG` — geofence center
 
-## Run
+## Run locally
 
 ```bash
 npm run dev
 ```
+
+## Vercel
+
+Set `CORS_ORIGIN` to your frontend URL with **no trailing slash**, e.g. `https://geo-attendance-nine.vercel.app`. Redeploy after env changes. Use `api/index.js` + `vercel.json` in this repo. Test: `https://your-api.vercel.app/health` should return JSON.
 
 ## Public API
 
